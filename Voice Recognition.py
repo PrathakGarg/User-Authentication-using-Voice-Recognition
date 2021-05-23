@@ -1,13 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Feb 20 18:28:38 2018
-
-@author: ramse
-"""
-
-# calculate filterbank features. Provides e.g. fbank and mfcc features for use in ASR applications
-# Author: James Lyons 2012
-
 from __future__ import division
 import numpy
 import decimal
@@ -27,22 +17,6 @@ import pyaudio
 def mfcc(signal, samplerate, winlen=0.025, winstep=0.01, numcep=13,
          nfilt=26, nfft=512, lowfreq=0, highfreq=None, preemph=0.97, ceplifter=22, appendEnergy=True,
          winfunc=lambda x: numpy.ones((x,))):
-    """Compute MFCC features from an audio signal.
-    :param signal: the audio signal from which to compute features. Should be an N*1 array
-    :param samplerate: the samplerate of the signal we are working with.
-    :param winlen: the length of the analysis window in seconds. Default is 0.025s (25 milliseconds)
-    :param winstep: the step between successive windows in seconds. Default is 0.01s (10 milliseconds)
-    :param numcep: the number of cepstrum to return, default 13
-    :param nfilt: the number of filters in the filterbank, default 26.
-    :param nfft: the FFT size. Default is 512.
-    :param lowfreq: lowest band edge of mel filters. In Hz, default is 0.
-    :param highfreq: highest band edge of mel filters. In Hz, default is samplerate/2
-    :param preemph: apply preemphasis filter with preemph as coefficient. 0 is no filter. Default is 0.97.
-    :param ceplifter: apply a lifter to final cepstral coefficients. 0 is no lifter. Default is 22.
-    :param appendEnergy: if this is true, the zeroth cepstral coefficient is replaced with the log of the total frame energy.
-    :param winfunc: the analysis window to apply to each frame. By default no window is applied. You can use numpy window functions here e.g. winfunc=numpy.hamming
-    :returns: A numpy array of size (NUMFRAMES by numcep) containing features. Each row holds 1 feature vector.
-    """
     feat, energy = fbank(signal, samplerate, winlen, winstep, nfilt, nfft, lowfreq, highfreq, preemph, winfunc)
     feat = numpy.log(feat)
     feat = dct(feat, type=2, axis=1, norm='ortho')[:, :numcep]
@@ -54,20 +28,6 @@ def mfcc(signal, samplerate, winlen=0.025, winstep=0.01, numcep=13,
 def fbank(signal, samplerate=16000, winlen=0.025, winstep=0.01,
           nfilt=26, nfft=512, lowfreq=0, highfreq=None, preemph=0.97,
           winfunc=lambda x: numpy.ones((x,))):
-    """Compute Mel-filterbank energy features from an audio signal.
-    :param signal: the audio signal from which to compute features. Should be an N*1 array
-    :param samplerate: the samplerate of the signal we are working with.
-    :param winlen: the length of the analysis window in seconds. Default is 0.025s (25 milliseconds)
-    :param winstep: the step between successive windows in seconds. Default is 0.01s (10 milliseconds)
-    :param nfilt: the number of filters in the filterbank, default 26.
-    :param nfft: the FFT size. Default is 512.
-    :param lowfreq: lowest band edge of mel filters. In Hz, default is 0.
-    :param highfreq: highest band edge of mel filters. In Hz, default is samplerate/2
-    :param preemph: apply preemphasis filter with preemph as coefficient. 0 is no filter. Default is 0.97.
-    :param winfunc: the analysis window to apply to each frame. By default no window is applied. You can use numpy window functions here e.g. winfunc=numpy.hamming
-    :returns: 2 values. The first is a numpy array of size (NUMFRAMES by nfilt) containing features. Each row holds 1 feature vector. The
-        second return value is the energy in each frame (total energy, unwindowed)
-    """
     highfreq = highfreq or samplerate / 2
     signal = preemphasis(signal, preemph)
     frames = framesig(signal, winlen * samplerate, winstep * samplerate, winfunc)
@@ -84,18 +44,7 @@ def fbank(signal, samplerate=16000, winlen=0.025, winstep=0.01,
 
 def logfbank(signal, samplerate=16000, winlen=0.025, winstep=0.01,
              nfilt=26, nfft=512, lowfreq=0, highfreq=None, preemph=0.97):
-    """Compute log Mel-filterbank energy features from an audio signal.
-    :param signal: the audio signal from which to compute features. Should be an N*1 array
-    :param samplerate: the samplerate of the signal we are working with.
-    :param winlen: the length of the analysis window in seconds. Default is 0.025s (25 milliseconds)
-    :param winstep: the step between successive windows in seconds. Default is 0.01s (10 milliseconds)
-    :param nfilt: the number of filters in the filterbank, default 26.
-    :param nfft: the FFT size. Default is 512.
-    :param lowfreq: lowest band edge of mel filters. In Hz, default is 0.
-    :param highfreq: highest band edge of mel filters. In Hz, default is samplerate/2
-    :param preemph: apply preemphasis filter with preemph as coefficient. 0 is no filter. Default is 0.97.
-    :returns: A numpy array of size (NUMFRAMES by nfilt) containing features. Each row holds 1 feature vector.
-    """
+
     feat, energy = fbank(signal, samplerate, winlen, winstep, nfilt, nfft, lowfreq, highfreq, preemph)
     return numpy.log(feat)
 
@@ -158,12 +107,9 @@ def get_filterbanks(nfilt=20, nfft=512, samplerate=16000, lowfreq=0, highfreq=No
     highfreq = highfreq or samplerate / 2
     assert highfreq <= samplerate / 2, "highfreq is greater than samplerate/2"
 
-    # compute points evenly spaced in mels
     lowmel = hz2mel(lowfreq)
     highmel = hz2mel(highfreq)
     melpoints = numpy.linspace(lowmel, highmel, nfilt + 2)
-    # our points are in Hz, but we use fft bins, so we have to convert
-    #  from Hz to fft bin number
     bin = numpy.floor((nfft + 1) * mel2hz(melpoints) / samplerate)
 
     fbank = numpy.zeros([nfilt, nfft // 2 + 1])
@@ -176,11 +122,6 @@ def get_filterbanks(nfilt=20, nfft=512, samplerate=16000, lowfreq=0, highfreq=No
 
 
 def lifter(cepstra, L=22):
-    """Apply a cepstral lifter the the matrix of cepstra. This has the effect of increasing the
-    magnitude of the high frequency DCT coeffs.
-    :param cepstra: the matrix of mel-cepstra, will be numframes * numcep in size.
-    :param L: the liftering coefficient to use. Default is 22. L <= 0 disables lifter.
-    """
     if L > 0:
         nframes, ncoeff = numpy.shape(cepstra)
         n = numpy.arange(ncoeff)
@@ -192,11 +133,6 @@ def lifter(cepstra, L=22):
 
 
 def delta(feat, N):
-    """Compute delta features from a feature vector sequence.
-    :param feat: A numpy array of size (NUMFRAMES by number of features) containing features. Each row holds 1 feature vector.
-    :param N: For each frame, calculate delta features based on preceding and following N frames
-    :returns: A numpy array of size (NUMFRAMES by number of features) containing delta features. Each row holds 1 delta feature vector.
-    """
     if N < 1:
         raise ValueError('N must be an integer >= 1')
     NUMFRAMES = len(feat)
@@ -221,14 +157,6 @@ def rolling_window(a, window, step=1):
 
 
 def framesig(sig, frame_len, frame_step, winfunc=lambda x: numpy.ones((x,)), stride_trick=True):
-    """Frame a signal into overlapping frames.
-    :param sig: the audio signal to frame.
-    :param frame_len: length of each frame measured in samples.
-    :param frame_step: number of samples after the start of the previous frame that the next frame should begin.
-    :param winfunc: the analysis window to apply to each frame. By default no window is applied.
-    :param stride_trick: use stride trick to compute the rolling window and window multiplication faster
-    :returns: an array of frames. Size is NUMFRAMES by frame_len.
-    """
     slen = len(sig)
     frame_len = int(round_half_up(frame_len))
     frame_step = int(round_half_up(frame_step))
@@ -255,14 +183,6 @@ def framesig(sig, frame_len, frame_step, winfunc=lambda x: numpy.ones((x,)), str
 
 
 def deframesig(frames, siglen, frame_len, frame_step, winfunc=lambda x: numpy.ones((x,))):
-    """Does overlap-add procedure to undo the action of framesig.
-    :param frames: the array of frames.
-    :param siglen: the length of the desired signal, use 0 if unknown. Output will be truncated to siglen samples.
-    :param frame_len: length of each frame measured in samples.
-    :param frame_step: number of samples after the start of the previous frame that the next frame should begin.
-    :param winfunc: the analysis window to apply to each frame. By default no window is applied.
-    :returns: a 1-D signal.
-    """
     frame_len = round_half_up(frame_len)
     frame_step = round_half_up(frame_step)
     numframes = numpy.shape(frames)[0]
@@ -289,11 +209,6 @@ def deframesig(frames, siglen, frame_len, frame_step, winfunc=lambda x: numpy.on
 
 
 def magspec(frames, NFFT):
-    """Compute the magnitude spectrum of each frame in frames. If frames is an NxD matrix, output will be Nx(NFFT/2+1).
-    :param frames: the array of frames. Each row is a frame.
-    :param NFFT: the FFT length to use. If NFFT > frame_len, the frames are zero-padded.
-    :returns: If frames is an NxD matrix, output will be Nx(NFFT/2+1). Each row will be the magnitude spectrum of the corresponding frame.
-    """
     if numpy.shape(frames)[1] > NFFT:
         logging.warn(
             'frame length (%d) is greater than FFT size (%d), frame will be truncated. Increase NFFT to avoid.',
@@ -303,21 +218,10 @@ def magspec(frames, NFFT):
 
 
 def powspec(frames, NFFT):
-    """Compute the power spectrum of each frame in frames. If frames is an NxD matrix, output will be Nx(NFFT/2+1).
-    :param frames: the array of frames. Each row is a frame.
-    :param NFFT: the FFT length to use. If NFFT > frame_len, the frames are zero-padded.
-    :returns: If frames is an NxD matrix, output will be Nx(NFFT/2+1). Each row will be the power spectrum of the corresponding frame.
-    """
     return 1.0 / NFFT * numpy.square(magspec(frames, NFFT))
 
 
 def logpowspec(frames, NFFT, norm=1):
-    """Compute the log power spectrum of each frame in frames. If frames is an NxD matrix, output will be Nx(NFFT/2+1).
-    :param frames: the array of frames. Each row is a frame.
-    :param NFFT: the FFT length to use. If NFFT > frame_len, the frames are zero-padded.
-    :param norm: If norm=1, the log power spectrum is normalised so that the max value (across all frames) is 0.
-    :returns: If frames is an NxD matrix, output will be Nx(NFFT/2+1). Each row will be the log power spectrum of the corresponding frame.
-    """
     ps = powspec(frames, NFFT);
     ps[ps <= 1e-30] = 1e-30
     lps = 10 * numpy.log10(ps)
@@ -328,11 +232,6 @@ def logpowspec(frames, NFFT, norm=1):
 
 
 def preemphasis(signal, coeff=0.95):
-    """perform preemphasis on the input signal.
-    :param signal: The signal to filter.
-    :param coeff: The preemphasis coefficient. 0 is no filter, default is 0.95.
-    :returns: the filtered signal.
-    """
     return numpy.append(signal[0], signal[1:] - coeff * signal[:-1])
 
 
@@ -414,14 +313,10 @@ def split_codebook(data, codebook, epsilon, initial_avg_dist):
 
     print('> splitting to size', len_codebook)
 
-    # try to reach a convergence by minimizing the average distortion. this is
-    # done by moving the codevectors step by step to the center of the points
-    # in their proximity
     avg_dist = 0
     err = epsilon + 1
     num_iter = 0
     while err > epsilon:
-        # find closest codevectors for each vector in data (find the proximity of each codevector)
         closest_c_list = [None] * _size_data  # list that contains the nearest codevector for each input data vector
         vecs_near_c = defaultdict(list)  # list with codevector index -> input data vector mapping
         vecs_idxs_near_c = defaultdict(list)  # list with codevector index -> input data index mapping
@@ -438,7 +333,6 @@ def split_codebook(data, codebook, epsilon, initial_avg_dist):
             vecs_near_c[closest_c_index].append(vec)
             vecs_idxs_near_c[closest_c_index].append(i)
 
-        # update codebook: recalculate each codevector so that it sits in the center of the points in their proximity
         for i_c in range(len_codebook):  # for each codevector index
             vecs = vecs_near_c.get(i_c) or []  # get its proximity input vectors
             num_vecs_near_c = len(vecs)
@@ -618,7 +512,6 @@ def microphone_integration(file_name):
 
     audio = pyaudio.PyAudio()
 
-    # start Recording
     stream = audio.open(format=FORMAT, channels=CHANNELS,
                         rate=RATE, input=True,
                         frames_per_buffer=CHUNK)
@@ -726,13 +619,9 @@ elif Choice == '8':
     print("\n\n", "The Closest Match to", Inputname, "is:")
     print(name, mini)
 
-# print(matching(feat2,codebook1),"MATCHING1")
-# print(matching(feat3,codebook1),"MATCHING2")
-# print(matching(feat4,codebook1),"MATCHING3")
 spf = wave.open('1.wav', 'r')  # Extract Raw Audio from Wav File
 signal = spf.readframes(-1)
 signal = numpy.fromstring(signal, numpy.int16)
-# If Stereo
 if spf.getnchannels() == 2:  # There are 2 channels for audio
     print('Just mono files')
     sys.exit(0)
@@ -745,7 +634,6 @@ fig = plt.figure()
 ax = fig.add_subplot(221)
 cb = numpy.asarray(codebook1)
 print(cb.shape)
-# 199 Blue points and 32/16/8 Red points
 ax.scatter(feat1[:, 2], feat1[:, 10], color='blue', marker='.')  # All points
 ay = fig.add_subplot(222)  # Taking only 2 dimensions at a time. [:,5]- Takes all values of 5th dimension
 ay.scatter(cb[:, 2], cb[:, 10], color='red', marker='.')  # Rate points
